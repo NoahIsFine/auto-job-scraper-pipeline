@@ -2,7 +2,11 @@
 This script reads and analyzes scraped job listings from a CSV file.
 It filters and displays specific roles to provide insight into job demand.
 """
+
 import pandas as pd
+import requests
+
+DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1517334847151018106/rClODIwAtNnt7eIP-dLAs5VwwBXwCH1xXzOPe0e8OXTrl5WicfYgUM1CeBAc1nBLTjDM"
 
 """
 Attempt to load the job data from the local CSV file.
@@ -26,19 +30,47 @@ java_jobs = df[df['Job Title'].str.contains('Java', case=False)]
 manager_jobs = df[df['Job Title'].str.contains('Manager', case=False)]
 
 """
-Print the demand statistics and display a detailed preview of the Python roles.
-If no Python roles are found, display a fallback notification message.
+Builds the formatted string payload containing the statistical summary of found jobs.
+Appends the top python listings to provide a preview of the available positions.
 """
-print("Skill/Role Demand Breakdown:\n")
-print(f"Python-related Roles: {len(python_jobs)}\n")
-print(f"Java-related Roles: {len(java_jobs)}\n")
-print(f"Managerial Roles: {len(manager_jobs)}\n")
-print("-" * 32)
+report_message = (
+    "📊 **TECH JOB MARKET REPORT** 📊\n"
+    f"Total Job Postings Scanned: `{len(df)}`\n"
+    "```text\n"
+    "=========================================\n"
+    f"🔹 Python Roles Found : {len(python_jobs)}\n"
+    f"🔹 Java Roles Found   : {len(java_jobs)}\n"
+    f"🔹 Manager Roles Found: {len(manager_jobs)}\n"
+    "=========================================\n\n"
+    "LATEST OPPORTUNITIES SUBSET:\n"
+)
 
-print("\nPreviewing Python Opportunities Found:")
+empty = (
+    "Pipeline returned empty."
+)
 
 if not python_jobs.empty:
-    for index, row in python_jobs.iterrows():
-        print(f"-> {row['Job Title']} at {row['Company Name']} ({row['Location']})")
+    report_message += "🐍 Top Python Positions:\n"
+    for index, row in python_jobs.head(3).iterrows():
+        title = row['Job Title'][:25]
+        comp = row['Company Name'][:15]
+        report_message += f"  - {title:<25} @ {comp:<15}\n"
+
+    report_message += "```\n🏁 *Pipeline execution completed successfully.*"
+
+    payload = {"content": report_message}
+
 else:
-    print("No Python jobs found in this batch.")
+    payload = {"content": empty}
+
+"""
+Transmits the compiled job report payload to the designated Discord channel.
+Checks the server response status to verify whether the webhook delivery succeeded.
+"""
+print("Sending data report to your Discord channel...")
+response = requests.post(DISCORD_WEBHOOK_URL, json=payload)
+
+if response.status_code == 204:
+    print("🚀 Success! Check your Discord app on your phone or desktop!")
+else:
+    print(f"❌ Failed to send alert. Error code: {response.status_code}")
