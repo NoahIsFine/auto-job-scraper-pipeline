@@ -1,37 +1,32 @@
 import requests
-from bs4 import BeautifulSoup
 import pandas as pd
 
 """
-Fetch fake job listings from the target URL.
-Parse the response using BeautifulSoup to locate job elements.
+Fetch live job listings from the Greenhouse Job Board API.
+No HTML parsing required — the API returns structured JSON directly.
 """
-TARGET_URL = "https://realpython.github.io/fake-jobs/"
-response = requests.get(TARGET_URL)
+BOARD_TOKEN = "stripe"
+TARGET_URL = f"https://boards-api.greenhouse.io/v1/boards/{BOARD_TOKEN}/jobs"
 
-soup = BeautifulSoup(response.text, "html.parser")
-results_container = soup.find(id="ResultsContainer")
-job_elements = results_container.find_all("div", class_="card-content")
+response = requests.get(TARGET_URL)
+job_elements = response.json()["jobs"]
 
 extracted_jobs_list = []
 
-print("Extracting all jobs from the webpage...")
+print(f"Extracting all jobs from the Greenhouse board: '{BOARD_TOKEN}'...")
 
 for job in job_elements:
     """
-    Extract job title, company, and location details from the card element.
-    Clean the extracted text and append the dictionary to the main list.
+    Extract job title, location, URL, and date from the JSON response.
+    The location field is a nested object, so we access job["location"]["name"].
     """
-    title_element = job.find("h2", class_="title") 
-    company_element = job.find("h3", class_="company") 
-    location_element = job.find("p", class_="location") 
-    
     job_dictionary = {
-        "Job Title": title_element.text.strip(),
-        "Company Name": company_element.text.strip(),
-        "Location": location_element.text.strip()
+        "Job Title": job["title"],
+        "Company Name": BOARD_TOKEN,
+        "Location": job["location"]["name"],
+        "Job URL": job["absolute_url"],
+        "Updated At": job["updated_at"]
     }
-
     extracted_jobs_list.append(job_dictionary)
 
 """
@@ -39,7 +34,6 @@ Convert the list of extracted jobs into a Pandas DataFrame.
 Save the DataFrame to a CSV file without row index labels.
 """
 df = pd.DataFrame(extracted_jobs_list)
-
 df.to_csv("job_data.csv", index=False)
 
 print("\nPipeline execution successful!")

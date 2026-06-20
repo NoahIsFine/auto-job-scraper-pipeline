@@ -5,8 +5,11 @@ It filters and displays specific roles to provide insight into job demand.
 
 import pandas as pd
 import requests
+import os
+from dotenv import load_dotenv
 
-DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1517334847151018106/rClODIwAtNnt7eIP-dLAs5VwwBXwCH1xXzOPe0e8OXTrl5WicfYgUM1CeBAc1nBLTjDM"
+load_dotenv()
+DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL")
 
 """
 Attempt to load the job data from the local CSV file.
@@ -22,25 +25,22 @@ print("--- Data Intelligence Report ---")
 print(f"Total Jobs Analyzed: {len(df)}\n")
 
 """
-Filter the job dataset for Python, Java, and Manager roles.
+Filter the job dataset for Programming-related roles.
 Case-insensitive matching is used to capture all relevant job titles.
 """
-python_jobs = df[df['Job Title'].str.contains('Python', case=False)]
-java_jobs = df[df['Job Title'].str.contains('Java', case=False)]
-manager_jobs = df[df['Job Title'].str.contains('Manager', case=False)]
+prog_pattern = 'Developer|Software|Engineer|Programmer|Backend|Frontend|Full Stack'
+programming_jobs = df[df['Job Title'].str.contains(prog_pattern, case=False, na=False)]
 
 """
 Builds the formatted string payload containing the statistical summary of found jobs.
-Appends the top python listings to provide a preview of the available positions.
+Appends the top listings to provide a preview of the available positions.
 """
 report_message = (
     "📊 **TECH JOB MARKET REPORT** 📊\n"
     f"Total Job Postings Scanned: `{len(df)}`\n"
     "```text\n"
     "=========================================\n"
-    f"🔹 Python Roles Found : {len(python_jobs)}\n"
-    f"🔹 Java Roles Found   : {len(java_jobs)}\n"
-    f"🔹 Manager Roles Found: {len(manager_jobs)}\n"
+    f"🔹 Programming Roles Found: {len(programming_jobs)}\n"
     "=========================================\n\n"
     "LATEST OPPORTUNITIES SUBSET:\n"
 )
@@ -49,12 +49,12 @@ empty = (
     "Pipeline returned empty."
 )
 
-if not python_jobs.empty:
-    report_message += "🐍 Top Python Positions:\n"
-    for index, row in python_jobs.head(3).iterrows():
-        title = row['Job Title'][:25]
-        comp = row['Company Name'][:15]
-        report_message += f"  - {title:<25} @ {comp:<15}\n"
+if not programming_jobs.empty:
+    report_message += "💻 Top Programming Positions:\n"
+    for index, row in programming_jobs.head(10).iterrows():
+        title = row['Job Title']
+        url = row['Job URL'].replace("https://", "").replace("http://", "")
+        report_message += f"  - {title:<40} {url}\n"
 
     report_message += "```\n🏁 *Pipeline execution completed successfully.*"
 
