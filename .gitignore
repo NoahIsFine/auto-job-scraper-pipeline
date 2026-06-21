@@ -1,3 +1,5 @@
 .env
+job_data.csv
 *.xlsx
 __pycache__/
+study_docs/

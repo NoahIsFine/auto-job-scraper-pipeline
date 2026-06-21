@@ -1,39 +1,45 @@
 import requests
 import pandas as pd
+import os
+from pathlib import Path
+from dotenv import load_dotenv
 
-"""
-Fetch live job listings from the Greenhouse Job Board API.
-No HTML parsing required — the API returns structured JSON directly.
-"""
-BOARD_TOKEN = "stripe"
-TARGET_URL = f"https://boards-api.greenhouse.io/v1/boards/{BOARD_TOKEN}/jobs"
+CSV_PATH = Path(__file__).parent / "job_data.csv"
 
-response = requests.get(TARGET_URL)
-job_elements = response.json()["jobs"]
+def main():
+    # Fetch live job listings from the Greenhouse Job Board API.
+    # No HTML parsing required — the API returns structured JSON directly.
 
-extracted_jobs_list = []
+    load_dotenv()
+    BOARD_TOKEN = os.getenv("GREENHOUSE_BOARD_TOKEN")
+    TARGET_URL = f"https://boards-api.greenhouse.io/v1/boards/{BOARD_TOKEN}/jobs"
 
-print(f"Extracting all jobs from the Greenhouse board: '{BOARD_TOKEN}'...")
+    response = requests.get(TARGET_URL)
+    response.raise_for_status()  # Raises an HTTPError if status is 4xx/5xx
+    job_elements = response.json()["jobs"]
 
-for job in job_elements:
-    """
-    Extract job title, location, URL, and date from the JSON response.
-    The location field is a nested object, so we access job["location"]["name"].
-    """
-    job_dictionary = {
-        "Job Title": job["title"],
-        "Company Name": BOARD_TOKEN,
-        "Location": job["location"]["name"],
-        "Job URL": job["absolute_url"],
-        "Updated At": job["updated_at"]
-    }
-    extracted_jobs_list.append(job_dictionary)
+    extracted_jobs_list = []
 
-"""
-Convert the list of extracted jobs into a Pandas DataFrame.
-Save the DataFrame to a CSV file without row index labels.
-"""
-df = pd.DataFrame(extracted_jobs_list)
-df.to_csv("job_data.csv", index=False)
+    print(f"Extracting all jobs from the Greenhouse board: '{BOARD_TOKEN}'...")
 
-print("\nPipeline execution successful!")
+    for job in job_elements:
+        # Extract job title, location, URL, and date from the JSON response.
+        # Use .get() to safely access keys, including nested objects like location.
+        job_dictionary = {
+            "Job Title": job.get("title", "Unknown Title"),
+            "Company Name": BOARD_TOKEN,
+            "Location": job.get("location", {}).get("name", "Unknown Location"),
+            "Job URL": job.get("absolute_url", ""),
+            "Updated At": job.get("updated_at", "")
+        }
+        extracted_jobs_list.append(job_dictionary)
+
+    # Convert the list of extracted jobs into a Pandas DataFrame.
+    # Save the DataFrame to a CSV file without row index labels.
+    df = pd.DataFrame(extracted_jobs_list)
+    df.to_csv(CSV_PATH, index=False)
+
+    print("\nPipeline execution successful!")
+
+if __name__ == "__main__":
+    main()
