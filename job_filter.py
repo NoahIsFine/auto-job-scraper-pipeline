@@ -13,6 +13,9 @@ def main():
     load_dotenv()
     DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL")
 
+    DEFAULT_PATTERN = 'Developer|Software|Engineer|Programmer|Backend|Frontend|Full Stack'
+    JOB_FILTER_PATTERN = os.getenv("JOB_FILTER_PATTERN", DEFAULT_PATTERN)
+
     if not DISCORD_WEBHOOK_URL:
         raise RuntimeError("DISCORD_WEBHOOK_URL not set in .env")
 
@@ -28,8 +31,7 @@ def main():
 
     # Filter the job dataset for Programming-related roles.
     # Case-insensitive matching is used to capture all relevant job titles.
-    prog_pattern = 'Developer|Software|Engineer|Programmer|Backend|Frontend|Full Stack'
-    programming_jobs = df[df['Job Title'].str.contains(prog_pattern, case=False, na=False)]
+    programming_jobs = df[df['Job Title'].str.contains(JOB_FILTER_PATTERN, case=False, na=False)]
 
     # Builds the formatted string payload containing the statistical summary of found jobs.
     # Appends the top listings to provide a preview of the available positions.
