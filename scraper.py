@@ -1,3 +1,10 @@
+"""
+Greenhouse API Scraper Module
+
+Fetches live job listings from the Greenhouse Job Board API.
+Extracts structured job data and saves it to a local CSV file.
+"""
+
 import requests
 import pandas as pd
 import os
@@ -7,15 +14,24 @@ from dotenv import load_dotenv
 CSV_PATH = Path(__file__).parent / "job_data.csv"
 
 def main():
-    # Fetch live job listings from the Greenhouse Job Board API.
-    # No HTML parsing required — the API returns structured JSON directly.
-
+    """
+    Main entry point for the scraper pipeline.
+    
+    1. Loads environment configurations.
+    2. Fetches the latest job postings from the configured Greenhouse board.
+    3. Parses the JSON response to extract relevant job attributes.
+    4. Serializes the structured data to a CSV file.
+    """
     load_dotenv()
     BOARD_TOKEN = os.getenv("GREENHOUSE_BOARD_TOKEN")
+
+    if not BOARD_TOKEN:
+        raise RuntimeError("GREENHOUSE_BOARD_TOKEN not set in .env")
+
     TARGET_URL = f"https://boards-api.greenhouse.io/v1/boards/{BOARD_TOKEN}/jobs"
 
     response = requests.get(TARGET_URL)
-    response.raise_for_status()  # Raises an HTTPError if status is 4xx/5xx
+    response.raise_for_status()
     job_elements = response.json()["jobs"]
 
     extracted_jobs_list = []
@@ -23,8 +39,6 @@ def main():
     print(f"Extracting all jobs from the Greenhouse board: '{BOARD_TOKEN}'...")
 
     for job in job_elements:
-        # Extract job title, location, URL, and date from the JSON response.
-        # Use .get() to safely access keys, including nested objects like location.
         job_dictionary = {
             "Job Title": job.get("title", "Unknown Title"),
             "Company Name": BOARD_TOKEN,
@@ -34,8 +48,6 @@ def main():
         }
         extracted_jobs_list.append(job_dictionary)
 
-    # Convert the list of extracted jobs into a Pandas DataFrame.
-    # Save the DataFrame to a CSV file without row index labels.
     df = pd.DataFrame(extracted_jobs_list)
     df.to_csv(CSV_PATH, index=False)
 
